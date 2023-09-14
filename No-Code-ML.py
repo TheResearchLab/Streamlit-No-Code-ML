@@ -91,6 +91,8 @@ def main() -> None:
         st.session_state.user_session_data[ctx.session_id]['data_source'] = data_source 
         st.session_state.user_session_data[ctx.session_id]['data_key'] = data_key
 
+
+
     def check_cache_data():
 
         # if there is no data then load data
@@ -111,10 +113,21 @@ def main() -> None:
         if data_source == 'My Computer':
             st.error('Please upload csv file with your data')
 
+    
+
+    
     def check_cache_hyperparams():
         module_name = model_selection_dict[prediction_task][algorithm_name]
         
-        if 'hyperparams' in st.session_state.user_session_data[ctx.session_id]:
+        try:
+            same_algo_bool = st.session_state.user_session_data[ctx.session_id]['algorithm_name'] == algorithm_name
+        except KeyError:
+            st.session_state.user_session_data[ctx.session_id]['algorithm_name'] = algorithm_name
+            same_algo_bool = True
+
+
+
+        if 'hyperparams' in st.session_state.user_session_data[ctx.session_id] and same_algo_bool :
             #st.write('true')
             #hyperparams = user_session_data.hyperparams
             model =  model_instance(str(algorithm_name) ,str(module_name)) #can I call set params on this?
@@ -231,6 +244,7 @@ def main() -> None:
         with params_form.form("hyperparam_form"):
             
             _,model_param_dict = check_cache_hyperparams()
+            
             
         
             st.write(f" :green[{algorithm_name}] Hyperparameters")
