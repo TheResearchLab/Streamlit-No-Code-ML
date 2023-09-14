@@ -11,6 +11,7 @@ import pandas as pd
 
 def main() -> None:
 
+    
     # Sklearn packages/module metadata
 
     model_selection_dict = { "Classification":{
@@ -56,7 +57,7 @@ def main() -> None:
 
     ctx = get_script_run_ctx()
 
-    st.write(ctx.session_id)
+    #st.write(ctx.session_id)
 
    
     # if hasattr(st.session_state,'user_session_data'):
@@ -118,21 +119,31 @@ def main() -> None:
     
     def check_cache_hyperparams():
         module_name = model_selection_dict[prediction_task][algorithm_name]
+
+        # Check for change in algo
+        if 'pred_algorithm_name' in st.session_state.user_session_data[ctx.session_id] and 'param_algorithm_name' in st.session_state.user_session_data[ctx.session_id]:
+            check_1 = st.session_state.user_session_data[ctx.session_id]['pred_algorithm_name'] == st.session_state.user_session_data[ctx.session_id]['param_algorithm_name']
+            same_algo_bool = st.session_state.user_session_data[ctx.session_id]['algorithm_name'] == algorithm_name and check_1
         
-        try:
-            same_algo_bool = st.session_state.user_session_data[ctx.session_id]['algorithm_name'] == algorithm_name
-        except KeyError:
-            st.session_state.user_session_data[ctx.session_id]['algorithm_name'] = algorithm_name
+        elif 'param_algorithm_name' in st.session_state.user_session_data[ctx.session_id]:
+            same_algo_bool = st.session_state.user_session_data[ctx.session_id]['param_algorithm_name'] == algorithm_name
+
+        elif 'pred_algorithm_name' in st.session_state.user_session_data[ctx.session_id]:
+            same_algo_bool = st.session_state.user_session_data[ctx.session_id]['pred_algorithm_name'] == algorithm_name
+        
+        elif 'pred_algorithm_name' not in st.session_state.user_session_data[ctx.session_id] and 'param_algorithm_name' not in st.session_state.user_session_data[ctx.session_id]:
+            same_algo_bool = False
+
+        elif st.session_state.user_session_data[ctx.session_id]['algorithm_name'] == algorithm_name:
             same_algo_bool = True
-
-
-
+            
+        # check for existing hyperparams
         if 'hyperparams' in st.session_state.user_session_data[ctx.session_id] and same_algo_bool :
-            #st.write('true')
             #hyperparams = user_session_data.hyperparams
             model =  model_instance(str(algorithm_name) ,str(module_name)) #can I call set params on this?
             model_param_dict = st.session_state.user_session_data[ctx.session_id]['hyperparams'] 
-            #st.write(user_session_data['hyperparams'])
+            if 'dual' in model_param_dict:
+                model_param_dict['dual'] = False
             model = model.set_params(**model_param_dict)
             return model, model_param_dict
         else:
@@ -159,7 +170,7 @@ def main() -> None:
         
         if 'data' in st.session_state.user_session_data[ctx.session_id]:    
             X_train, X_test, y_train, y_test = st.session_state.user_session_data[ctx.session_id]['data']
-            model.fit(X_train.astype('float'),y_train.astype('float'))
+            model.fit(X_train,y_train)
             return [model,X_test,y_test]
             
         else:
@@ -179,7 +190,7 @@ def main() -> None:
         def split_data(dataframe) -> None:
             X = dataframe.iloc[:,:-1]
             y = dataframe.iloc[:,-1:]
-            st.session_state.user_session_data[ctx.session_id]['data'] = train_test_split(X, y, test_size=0.2, random_state = 42) 
+            st.session_state.user_session_data[ctx.session_id]['data'] = train_test_split(X, y, test_size=0.3) 
             st.session_state.user_session_data[ctx.session_id]['data_cols'] = dataframe.columns
             return None
 
@@ -248,7 +259,11 @@ def main() -> None:
             
         
             st.write(f" :green[{algorithm_name}] Hyperparameters")
+            
             for key,value in model_param_dict.items():
+                if key == 'dual':
+                    st.success(key + " must be False")
+                    value = False
                 original_type = 'NoneType' if isinstance(model_param_dict[key],type(None)) else type(model_param_dict[key])
                 model_param_dict[key] = None if original_type == 'NoneType' else original_type(st.text_input(f"{key}",model_param_dict.get(key,value)))
             submitted = st.form_submit_button("Update Hyperparameters")
@@ -256,6 +271,7 @@ def main() -> None:
             if submitted:
                 st.session_state.user_session_data[ctx.session_id]['hyperparams'] = model_param_dict
                 st.session_state.user_session_data[ctx.session_id]['algorithm_name'] = algorithm_name
+                st.session_state.user_session_data[ctx.session_id]['param_algorithm_name'] = algorithm_name
                 params_form.empty()
                 
         
@@ -343,6 +359,7 @@ def main() -> None:
           trained_model,X_test,y_test = train_model(data_key,data_source,model)
           sample_data = np.array([int(feature) for key,feature in preDict.items()])
           sample_data = sample_data.reshape(1,len(sample_data))
+          st.session_state.user_session_data[ctx.session_id]['pred_algorithm_name'] = algorithm_name
           st.success(f'{trained_model.predict(sample_data)}')
           prediction_form.empty() 
           
