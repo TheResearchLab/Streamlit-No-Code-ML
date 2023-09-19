@@ -304,7 +304,7 @@ def main() -> None:
             try:
                 st.table(X_train.describe())
             except:
-                st.table(pd.DataFrame(X_train,columns=st.session_state.user_session_data[ctx.session_id]['feature_names'][0:-1]).describe())
+                st.table(pd.DataFrame(X_train,columns=st.session_state.user_session_data[ctx.session_id]['data_cols'][0:-1]).describe())
 
 
             data_transformation_form = st.empty()
